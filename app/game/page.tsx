@@ -219,8 +219,16 @@ export default function GamePage() {
                   </div>
                 </DialogContent>
               </Dialog>
+            {winner && (
+                <div className="flex justify-center">
+                    <Button variant="secondary" onClick={() => setShowDialog(true)}>
+                        Show Results
+                    </Button>
+                </div>
+            )}
             </>
           )}
+          
         </CardContent>
       </Card>
     </main>

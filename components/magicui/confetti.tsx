@@ -17,7 +17,11 @@ import React, {
   useRef,
 } from "react";
 
-import { Button, ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+
+// If ButtonProps is not exported, define a compatible type:
+import type { ButtonHTMLAttributes } from "react";
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
 
 type Api = {
   fire: (options?: ConfettiOptions) => void;
