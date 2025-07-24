@@ -17,7 +17,9 @@ import confetti from "canvas-confetti";
 
 export default function GamePage() {
   const [gameId, setGameId] = useState<string | null>(null);
-
+  const [playerSymbols, setPlayerSymbols] = useState<{
+    [key: string]: "X" | "O";
+  }>({});
   const [player1, setPlayer1] = useState("");
   const [player2, setPlayer2] = useState("");
   const [gameStarted, setGameStarted] = useState(false);
@@ -49,6 +51,12 @@ export default function GamePage() {
         const data = await res.json();
         setGameId(data._id); // Save the game ID for future use
         setGameStarted(true);
+        const isPlayer1X = round % 2 === 1;
+        setPlayerSymbols({
+          [player1]: isPlayer1X ? "X" : "O",
+          [player2]: isPlayer1X ? "O" : "X",
+        });
+        setCurrentPlayer("X");
       } catch (err) {
         console.error("Error starting game:", err);
       }
@@ -57,6 +65,7 @@ export default function GamePage() {
 
   const handleCellClick = (index: number) => {
     if (board[index] || checkWinner(board)) return;
+
     const updatedBoard = [...board];
     updatedBoard[index] = currentPlayer;
     setBoard(updatedBoard);
@@ -68,11 +77,20 @@ export default function GamePage() {
       if (result !== "Draw") {
         handleConfetti();
       }
-      if (result === "X")
-        setScores((s) => ({ ...s, player1Wins: s.player1Wins + 1 }));
-      else if (result === "O")
-        setScores((s) => ({ ...s, player2Wins: s.player2Wins + 1 }));
-      else setScores((s) => ({ ...s, draws: s.draws + 1 }));
+
+      // ✅ Determine who the winner is based on the playerSymbols mapping
+      if (result === "Draw") {
+        setScores((s) => ({ ...s, draws: s.draws + 1 }));
+      } else {
+        const winnerName = Object.keys(playerSymbols).find(
+          (player) => playerSymbols[player] === result
+        );
+        if (winnerName === player1) {
+          setScores((s) => ({ ...s, player1Wins: s.player1Wins + 1 }));
+        } else if (winnerName === player2) {
+          setScores((s) => ({ ...s, player2Wins: s.player2Wins + 1 }));
+        }
+      }
     } else if (!updatedBoard.includes(null)) {
       setWinner("Draw");
       setScores((s) => ({ ...s, draws: s.draws + 1 }));
@@ -103,7 +121,11 @@ export default function GamePage() {
   const handleContinue = async () => {
     if (gameId && winner) {
       const winnerName =
-        winner === "X" ? player1 : winner === "O" ? player2 : "Draw";
+        winner === "Draw"
+          ? "Draw"
+          : Object.keys(playerSymbols).find(
+              (player) => playerSymbols[player] === winner
+            ) || "Draw";
 
       try {
         await fetch(
@@ -120,6 +142,11 @@ export default function GamePage() {
     }
 
     setRound((prev) => prev + 1);
+    const isPlayer1X = (round + 1) % 2 === 1;
+    setPlayerSymbols({
+      [player1]: isPlayer1X ? "X" : "O",
+      [player2]: isPlayer1X ? "O" : "X",
+    });
     setBoard(Array(9).fill(null));
     setCurrentPlayer("X");
     setWinner(null);
@@ -128,7 +155,11 @@ export default function GamePage() {
   const handleStop = async () => {
     if (gameId && winner) {
       const winnerName =
-        winner === "X" ? player1 : winner === "O" ? player2 : "Draw";
+        winner === "Draw"
+          ? "Draw"
+          : Object.keys(playerSymbols).find(
+              (player) => playerSymbols[player] === winner
+            ) || "Draw";
 
       try {
         await fetch(
@@ -217,12 +248,27 @@ export default function GamePage() {
             <>
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
                 <div className="font-semibold">
-                  {player1}: {scores.player1Wins}
+                  {player1} (
+                  <span className="text-blue-400 font-semibold">
+                    {" "}
+                    {playerSymbols[player1]}{" "}
+                  </span>
+                  ): {scores.player1Wins}
                 </div>
                 <div className="font-semibold">Draws: {scores.draws}</div>
                 <div className="font-semibold">
-                  {player2}: {scores.player2Wins}
+                  {player2} (
+                  <span className="text-pink-400 font-semibold">
+                    {" "}
+                    {playerSymbols[player2]}{" "}
+                  </span>
+                  ): {scores.player2Wins}
                 </div>
+              </div>
+              <div className="text-center text-md text-white font-medium mt-1">
+                {currentPlayer === playerSymbols[player1]
+                  ? `${player1}'s Turn`
+                  : `${player2}'s Turn`}
               </div>
               <div className="flex justify-center">
                 <div className="grid grid-cols-3 gap-2">
@@ -234,9 +280,9 @@ export default function GamePage() {
                     >
                       <span
                         className={
-                          cell === "X"
+                          cell === playerSymbols[player1]
                             ? "text-blue-500"
-                            : cell === "O"
+                            : cell === playerSymbols[player2]
                             ? "text-pink-500"
                             : ""
                         }
@@ -256,7 +302,9 @@ export default function GamePage() {
                     <DialogTitle className="text-2xl">
                       {winner === "Draw"
                         ? "It's a draw!"
-                        : `${winner === "X" ? player1 : player2} wins!`}
+                        : `${Object.keys(playerSymbols).find(
+                            (player) => playerSymbols[player] === winner
+                          )} wins!`}
                     </DialogTitle>
                   </DialogHeader>
 
