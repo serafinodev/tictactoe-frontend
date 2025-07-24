@@ -16,6 +16,8 @@ import {
 import confetti from "canvas-confetti";
 
 export default function GamePage() {
+  const [gameId, setGameId] = useState<string | null>(null);
+
   const [player1, setPlayer1] = useState("");
   const [player2, setPlayer2] = useState("");
   const [gameStarted, setGameStarted] = useState(false);
@@ -30,9 +32,26 @@ export default function GamePage() {
   const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
   const [winner, setWinner] = useState<"X" | "O" | "Draw" | null>(null);
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (player1 && player2) {
-      setGameStarted(true);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/games`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ player1, player2 }),
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to create game");
+
+        const data = await res.json();
+        setGameId(data._id); // Save the game ID for future use
+        setGameStarted(true);
+      } catch (err) {
+        console.error("Error starting game:", err);
+      }
     }
   };
 
@@ -81,16 +100,50 @@ export default function GamePage() {
     return null;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (gameId && winner) {
+      const winnerName =
+        winner === "X" ? player1 : winner === "O" ? player2 : "Draw";
+
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/games/${gameId}/round`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ winner: winnerName }),
+          }
+        );
+      } catch (err) {
+        console.error("Failed to save round:", err);
+      }
+    }
+
     setRound((prev) => prev + 1);
     setBoard(Array(9).fill(null));
     setCurrentPlayer("X");
     setWinner(null);
   };
 
-  const handleStop = () => {
-    // Here you can call your backend API to save game session
-    // Then redirect to home ("/")
+  const handleStop = async () => {
+    if (gameId && winner) {
+      const winnerName =
+        winner === "X" ? player1 : winner === "O" ? player2 : "Draw";
+
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/games/${gameId}/round`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ winner: winnerName }),
+          }
+        );
+      } catch (err) {
+        console.error("Failed to save final round:", err);
+      }
+    }
+
     window.location.href = "/";
   };
 
@@ -125,6 +178,14 @@ export default function GamePage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-900 text-white flex flex-col items-center justify-center px-4 py-8">
+      <div className="mb-8 text-center">
+        <Button
+          variant="secondary"
+          onClick={() => (window.location.href = "/")}
+        >
+          Main Menu
+        </Button>
+      </div>
       <Card className="w-full max-w-md bg-white/5 border-white/10 text-white">
         <CardHeader>
           <CardTitle className="text-2xl text-center">
@@ -219,18 +280,23 @@ export default function GamePage() {
                   </div>
                 </DialogContent>
               </Dialog>
-            {winner && (
+              {winner && (
                 <div className="flex justify-center">
-                    <Button variant="secondary" onClick={() => setShowDialog(true)}>
-                        Show Results
-                    </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowDialog(true)}
+                  >
+                    Show Results
+                  </Button>
                 </div>
-            )}
+              )}
             </>
           )}
-          
         </CardContent>
       </Card>
+      <footer className="mt-12 text-sm text-gray-500 text-center">
+        &copy; 2025 Tic Tac Toe by serafinodev
+      </footer>
     </main>
   );
 }
