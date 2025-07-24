@@ -35,24 +35,25 @@ export default function GameClient() {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
   const [winner, setWinner] = useState<"X" | "O" | "Draw" | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleStartGame = async () => {
     if (player1 && (vsAI || player2)) {
       const aiName = vsAI ? "AI Bot" : player2;
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/games`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ player1, player2: aiName }),
-          }
-        );
+        // const res = await fetch(
+        //   `${process.env.NEXT_PUBLIC_API_URL}/api/games`,
+        //   {
+        //     method: "POST",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify({ player1, player2: aiName }),
+        //   }
+        // );
 
-        if (!res.ok) throw new Error("Failed to create game");
+        // if (!res.ok) throw new Error("Failed to create game");
 
-        const data = await res.json();
-        setGameId(data._id);
+        // const data = await res.json();
+        // setGameId(data._id);
         setGameStarted(true);
 
         const isPlayer1X = round % 2 === 1;
@@ -185,8 +186,53 @@ export default function GameClient() {
     return null;
   };
 
+  const saveRound = async (winner: string) => {
+    let newGameId = gameId;
+
+    if (!gameId) {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/games`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              player1,
+              player2,
+              player1Symbol: playerSymbols[player1],
+              player2Symbol: playerSymbols[player2],
+              mode,
+            }),
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to create game");
+
+        const data = await res.json();
+        newGameId = data._id;
+        setGameId(newGameId);
+      } catch (err) {
+        console.error("Failed to create game:", err);
+        return;
+      }
+    }
+
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/games/${newGameId}/round`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ winner }),
+        }
+      );
+    } catch (err) {
+      console.error("Failed to save round:", err);
+    }
+  };
+
   const handleContinue = async () => {
-    if (gameId && winner) {
+    if (winner) {
       const winnerName =
         winner === "Draw"
           ? "Draw"
@@ -194,18 +240,7 @@ export default function GameClient() {
               (player) => playerSymbols[player] === winner
             ) || "Draw";
 
-      try {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/games/${gameId}/round`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ winner: winnerName }),
-          }
-        );
-      } catch (err) {
-        console.error("Failed to save round:", err);
-      }
+      await saveRound(winnerName);
     }
 
     setRound((prev) => prev + 1);
@@ -220,7 +255,7 @@ export default function GameClient() {
   };
 
   const handleStop = async () => {
-    if (gameId && winner) {
+    if (winner) {
       const winnerName =
         winner === "Draw"
           ? "Draw"
@@ -228,18 +263,22 @@ export default function GameClient() {
               (player) => playerSymbols[player] === winner
             ) || "Draw";
 
-      try {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/games/${gameId}/round`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ winner: winnerName }),
-          }
-        );
-      } catch (err) {
-        console.error("Failed to save final round:", err);
-      }
+      await saveRound(winnerName);
+    }
+
+    window.location.href = "/";
+  };
+
+  const handleMainMenu = async () => {
+    if (winner) {
+      const winnerName =
+        winner === "Draw"
+          ? "Draw"
+          : Object.keys(playerSymbols).find(
+              (player) => playerSymbols[player] === winner
+            ) || "Draw";
+
+      await saveRound(winnerName); // same helper we made earlier
     }
 
     window.location.href = "/";
@@ -273,14 +312,11 @@ export default function GameClient() {
       });
     }, 250);
   };
-  
+
   return (
     <div>
       <div className="mb-8 text-center">
-        <Button
-          variant="secondary"
-          onClick={() => (window.location.href = "/")}
-        >
+        <Button variant="secondary" onClick={() => setShowConfirmDialog(true)}>
           Main Menu
         </Button>
       </div>
@@ -316,7 +352,7 @@ export default function GameClient() {
           ) : (
             <>
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <div className="font-semibold">
+                <div className="font-semibold text-xs sm:text-sm md:text-base break-words">
                   {player1} (
                   <span className="text-blue-400 font-semibold">
                     {" "}
@@ -324,8 +360,10 @@ export default function GameClient() {
                   </span>
                   ): {scores.player1Wins}
                 </div>
-                <div className="font-semibold">Draws: {scores.draws}</div>
-                <div className="font-semibold">
+                <div className="font-semibold text-xs sm:text-sm md:text-base break-words">
+                  Draws: {scores.draws}
+                </div>
+                <div className="font-semibold text-xs sm:text-sm md:text-base break-words">
                   {player2} (
                   <span className="text-pink-400 font-semibold">
                     {" "}
@@ -411,6 +449,36 @@ export default function GameClient() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="text-center w-[350px]">
+          <DialogHeader>
+            <DialogTitle className="text-lg">
+              Are you sure you want to return to the main menu?
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex justify-center gap-4 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              className="w-32"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                handleMainMenu(); // call your function here
+              }}
+              className="w-32"
+            >
+              Yes, Leave
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
