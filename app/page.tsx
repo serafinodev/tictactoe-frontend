@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Round {
   winner: string | "Draw";
@@ -44,14 +51,33 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-md space-y-6">
-        <Link href="/game">
-          <Button
-            variant="secondary"
-            className="w-full text-lg py-6 rounded-xl"
-          >
-            Start New Game
-          </Button>
-        </Link>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="secondary"
+              className="w-full text-lg py-6 rounded-xl"
+            >
+              Start New Game
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-gray-900 border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Select Game Mode</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col space-y-4 mt-4">
+              <Link href="/game?mode=player">
+                <Button variant="secondary" className="w-full">
+                  Play vs Player
+                </Button>
+              </Link>
+              <Link href="/game?mode=ai">
+                <Button className="w-full">
+                  Play vs AI
+                </Button>
+              </Link>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Card className="bg-white/5 border-white/10 text-white mt-6">
           <CardHeader>

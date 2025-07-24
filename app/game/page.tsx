@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useSearchParams } from "next/navigation";
 
 import confetti from "canvas-confetti";
 
 export default function GamePage() {
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
+  const vsAI = mode === "ai";
   const [gameId, setGameId] = useState<string | null>(null);
   const [playerSymbols, setPlayerSymbols] = useState<{
     [key: string]: "X" | "O";
@@ -35,33 +39,51 @@ export default function GamePage() {
   const [winner, setWinner] = useState<"X" | "O" | "Draw" | null>(null);
 
   const handleStartGame = async () => {
-    if (player1 && player2) {
+    if (player1 && (vsAI || player2)) {
+      const aiName = vsAI ? "AI Bot" : player2;
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/games`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ player1, player2 }),
+            body: JSON.stringify({ player1, player2: aiName }),
           }
         );
 
         if (!res.ok) throw new Error("Failed to create game");
 
         const data = await res.json();
-        setGameId(data._id); // Save the game ID for future use
+        setGameId(data._id);
         setGameStarted(true);
+
         const isPlayer1X = round % 2 === 1;
         setPlayerSymbols({
           [player1]: isPlayer1X ? "X" : "O",
-          [player2]: isPlayer1X ? "O" : "X",
+          [aiName]: isPlayer1X ? "O" : "X",
         });
+
+        setPlayer2(aiName); // ✅ Track it in state
         setCurrentPlayer("X");
       } catch (err) {
         console.error("Error starting game:", err);
       }
     }
   };
+
+  useEffect(() => {
+    if (
+      vsAI &&
+      currentPlayer === playerSymbols[player2] &&
+      !checkWinner(board)
+    ) {
+      const timeout = setTimeout(() => {
+        makeAIMove(board);
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [currentPlayer, board, vsAI, playerSymbols, player2]);
 
   const handleCellClick = (index: number) => {
     if (board[index] || checkWinner(board)) return;
@@ -96,7 +118,53 @@ export default function GamePage() {
       setScores((s) => ({ ...s, draws: s.draws + 1 }));
       setShowDialog(true);
     } else {
-      setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
+      const nextPlayer = currentPlayer === "X" ? "O" : "X";
+      setCurrentPlayer(nextPlayer);
+
+      const aiSymbol = playerSymbols[player2]; // 'O' or 'X'
+      if (vsAI && nextPlayer === aiSymbol) {
+        return setTimeout(() => makeAIMove(updatedBoard), 500);
+      }
+    }
+  };
+
+  const makeAIMove = (currentBoard: ("X" | "O" | null)[]) => {
+    const emptyIndices = currentBoard
+      .map((val, idx) => (val === null ? idx : null))
+      .filter((v) => v !== null) as number[];
+
+    if (emptyIndices.length === 0) return;
+
+    const randomIndex =
+      emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    const updatedBoard = [...currentBoard];
+    updatedBoard[randomIndex] = playerSymbols[player2]; // AI plays
+
+    const result = checkWinner(updatedBoard);
+    setBoard(updatedBoard); // ✅ always update after decision is made
+
+    if (result) {
+      setWinner(result);
+      setShowDialog(true);
+      if (result !== "Draw") handleConfetti();
+
+      const winnerName =
+        result === "Draw"
+          ? "Draw"
+          : Object.keys(playerSymbols).find(
+              (player) => playerSymbols[player] === result
+            );
+
+      if (result === "Draw") {
+        setScores((s) => ({ ...s, draws: s.draws + 1 }));
+      } else if (winnerName === player1) {
+        setScores((s) => ({ ...s, player1Wins: s.player1Wins + 1 }));
+      } else if (winnerName === player2) {
+        setScores((s) => ({ ...s, player2Wins: s.player2Wins + 1 }));
+      }
+    } else {
+      // Switch back to human
+      setCurrentPlayer(playerSymbols[player1]);
     }
   };
 
@@ -231,11 +299,13 @@ export default function GamePage() {
                 value={player1}
                 onChange={(e) => setPlayer1(e.target.value)}
               />
-              <Input
-                placeholder="Player 2 Name"
-                value={player2}
-                onChange={(e) => setPlayer2(e.target.value)}
-              />
+              {!vsAI && (
+                <Input
+                  placeholder="Player 2 Name"
+                  value={player2}
+                  onChange={(e) => setPlayer2(e.target.value)}
+                />
+              )}
               <Button
                 variant="secondary"
                 onClick={handleStartGame}
