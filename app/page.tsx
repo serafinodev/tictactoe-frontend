@@ -60,7 +60,10 @@ export default function Home() {
               {games.length > 3 && (
                 <div>
                   <Link href="/history">
-                    <Button variant="link" className="w-full text-muted-foreground">
+                    <Button
+                      variant="link"
+                      className="w-full text-muted-foreground"
+                    >
                       View All Matches
                     </Button>
                   </Link>
@@ -103,26 +106,36 @@ export default function Home() {
                     key={game._id}
                     className="bg-white/10 rounded-lg p-4 shadow-md"
                   >
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-sm text-gray-400">
+                    <div className="flex justify-between items-center mb-2 text-xs sm:text-sm">
+                      <div className="text-gray-400">
                         {new Date(game.createdAt).toLocaleString()}
                       </div>
-                      <div className="text-xs px-2 py-1 rounded bg-white/10 text-gray-300">
+                      <div className="px-2 py-1 rounded bg-white/10 text-gray-300">
                         Total Rounds: {game.rounds.length}
                       </div>
                     </div>
 
-                    <div className="flex justify-between text-lg mb-2">
-                      <div className={`${highlightClass(p1Wins, p2Wins)}`}>
+                    <div className="flex justify-between items-center gap-2 mb-2 text-sm sm:text-base flex-wrap">
+                      <div
+                        className={`${highlightClass(
+                          p1Wins,
+                          p2Wins
+                        )} truncate max-w-[40%]`}
+                      >
                         {game.player1}: {p1Wins} {p1Wins === 1 ? "win" : "wins"}
                       </div>
-                      <div className="text-gray-400 text-sm">vs</div>
-                      <div className={`${highlightClass(p2Wins, p1Wins)}`}>
+                      <div className="text-gray-400 text-xs sm:text-sm">vs</div>
+                      <div
+                        className={`${highlightClass(
+                          p2Wins,
+                          p1Wins
+                        )} truncate max-w-[40%] text-right`}
+                      >
                         {game.player2}: {p2Wins} {p2Wins === 1 ? "win" : "wins"}
                       </div>
                     </div>
 
-                    <div className="text-center text-gray-300">
+                    <div className="text-center text-gray-300 text-sm sm:text-base">
                       Draws:{" "}
                       <span className="text-blue-400 font-semibold">
                         {draws}
