@@ -29,7 +29,12 @@ export default function AllGames() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/games`);
         const data = await res.json();
-        setGames(data.sort((a: Game, b: Game) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setGames(
+          data.sort(
+            (a: Game, b: Game) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        );
       } catch (error) {
         console.error("Failed to fetch games", error);
       }
@@ -61,7 +66,9 @@ export default function AllGames() {
     <main className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-900 text-white flex flex-col items-center justify-center px-4 py-10">
       <div className="text-center mb-10">
         <h1 className="text-4xl md:text-5xl font-bold mb-2">All Matches</h1>
-        <p className="text-lg text-gray-300">A history of all Tic Tac Toe battles!</p>
+        <p className="text-lg text-gray-300">
+          A history of all Tic Tac Toe battles!
+        </p>
       </div>
 
       <div className="w-full max-w-2xl">
@@ -75,32 +82,54 @@ export default function AllGames() {
             )}
 
             {currentGames.map((game) => {
-              const p1Wins = game.rounds.filter((r) => r.winner === game.player1).length;
-              const p2Wins = game.rounds.filter((r) => r.winner === game.player2).length;
-              const draws = game.rounds.filter((r) => r.winner === "Draw").length;
+              const p1Wins = game.rounds.filter(
+                (r) => r.winner === game.player1
+              ).length;
+              const p2Wins = game.rounds.filter(
+                (r) => r.winner === game.player2
+              ).length;
+              const draws = game.rounds.filter(
+                (r) => r.winner === "Draw"
+              ).length;
 
               return (
-                <div key={game._id} className="bg-white/10 rounded-lg p-4 shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="text-sm text-gray-400">
+                <div
+                  key={game._id}
+                  className="bg-white/10 rounded-lg p-4 shadow-sm"
+                >
+                  {/* Date and Rounds */}
+                  <div className="flex justify-between items-center mb-2 text-xs sm:text-sm">
+                    <div className="text-gray-400">
                       {new Date(game.createdAt).toLocaleString()}
                     </div>
-                    <div className="text-xs px-2 py-1 rounded bg-white/10 text-gray-300">
+                    <div className="px-2 py-1 rounded bg-white/10 text-gray-300">
                       Rounds: {game.rounds.length}
                     </div>
                   </div>
 
-                  <div className="flex justify-between text-lg mb-2">
-                    <div className={`${highlightClass(p1Wins, p2Wins)}`}>
+                  {/* Player Wins */}
+                  <div className="flex justify-between items-center gap-2 mb-2 text-sm sm:text-base flex-wrap">
+                    <div
+                      className={`${highlightClass(
+                        p1Wins,
+                        p2Wins
+                      )} truncate max-w-[45%]`}
+                    >
                       {game.player1}: {p1Wins} {p1Wins === 1 ? "win" : "wins"}
                     </div>
-                    <div className="text-gray-400 text-sm">vs</div>
-                    <div className={`${highlightClass(p2Wins, p1Wins)}`}>
+                    <div className="text-gray-400 text-xs sm:text-sm">vs</div>
+                    <div
+                      className={`${highlightClass(
+                        p2Wins,
+                        p1Wins
+                      )} truncate max-w-[45%] text-right`}
+                    >
                       {game.player2}: {p2Wins} {p2Wins === 1 ? "win" : "wins"}
                     </div>
                   </div>
 
-                  <div className="text-center text-gray-300">
+                  {/* Draws */}
+                  <div className="text-center text-gray-300 text-sm sm:text-base">
                     Draws:{" "}
                     <span className="text-blue-400 font-semibold">{draws}</span>
                   </div>
@@ -124,7 +153,7 @@ export default function AllGames() {
             <div className="text-gray-300 text-sm">
               Page {currentPage} of {totalPages}
             </div>
-            
+
             <Button
               variant="secondary"
               onClick={handleNext}
@@ -139,7 +168,8 @@ export default function AllGames() {
         <div className="flex justify-center mt-6">
           <Link href="/">
             <Button variant="secondary">
-                <ChevronLeft /> Back to Home</Button>
+              <ChevronLeft /> Back to Home
+            </Button>
           </Link>
         </div>
       </div>
